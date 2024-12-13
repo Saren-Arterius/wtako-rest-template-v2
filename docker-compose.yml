@@ -1,0 +1,30 @@
+services:
+  app:
+    build: ./app
+    volumes:
+      - ./app:/src/app
+      - ./app/data:/data
+    ports:
+      - 31380:3000
+    restart: always
+    # environment:
+    #   PROD: 1
+  postgres:
+    build: ./postgres
+    restart: always
+    volumes:
+      - ./postgres/config/postgresql.conf:/etc/postgresql.conf
+      - ./postgres/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: pg_password
+  pgadmin:
+    build: ./pgadmin
+    restart: always
+    ports:
+      - 127.0.0.1:31300:80
+    volumes:
+      - ./pgadmin/data:/var/lib/pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
+    command: /bin/bash /entry.sh

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    // Modern JavaScript Features
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": [
+      "ES2023"
+    ],
+    // Type Checking
+    "strict": true,
+    "skipLibCheck": true,
+    // Module Handling
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    // Output
+    "sourceMap": true,
+    "outDir": "./dist", // Set the output directory to 'dist'
+    // Project References
+    "composite": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
