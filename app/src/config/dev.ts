@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import { secretsDev } from './secrets-dev';
 
 
@@ -7,7 +8,7 @@ interface Secrets {
   pg_host: string;
   pg_user: string;
   pg_password: string;
-  cf_auth_headers: { [key: string]: any };
+  cf_auth_headers: Record<string, string>;
 }
 
 const secrets: Secrets = secretsDev;
@@ -35,27 +36,12 @@ interface RedisConfig {
   db: number;
 }
 
-interface KnexConnectionConfig {
-  host: string;
-  user: string;
-  password: string;
-  database: string;
-}
-
-interface KnexConfig {
-  pool: { afterCreate(connection: any, callback: any): void; };
-  client: 'pg'; // Assuming the only supported client is pg, adjust accordingly
-  connection: KnexConnectionConfig;
-}
-
-interface TrustedHostsConfig {
-  [key: string]: boolean;
-}
+type TrustedHostsConfig = Record<string, boolean>;
 
 interface CFPurgeCacheDefaultOptions {
   method: 'POST' | 'GET' | 'PUT' | 'DELETE'; // Adjust according to your needs
   url: string;
-  headers: { [key: string]: string };
+  headers: Record<string, string>;
 }
 
 interface CFPurgeCacheConfig {
@@ -63,6 +49,14 @@ interface CFPurgeCacheConfig {
   defaultOptions: CFPurgeCacheDefaultOptions;
 }
 
+interface KnexConfig extends Knex.Config {
+  connection: {
+    host: string,
+    user: string,
+    password: string,
+    database?: string
+  }
+}
 // Define the main ConfigDev interface
 export interface Config {
   clientConfig: ClientConfig;
@@ -106,11 +100,6 @@ export const configDev: Config = {
       user: secrets.pg_user,
       password: secrets.pg_password,
       database: 'app_backend_dev'
-    },
-    pool: {
-      afterCreate: function (connection: any, callback: any): void {
-        throw new Error('Function not implemented.');
-      }
     }
   },
   trustedHosts: {

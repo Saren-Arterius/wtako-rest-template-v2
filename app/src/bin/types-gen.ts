@@ -5,7 +5,7 @@ updateTypes(knex, { output: '/src/app/src/types/tables.ts' }).then(() => {
   setTimeout(() => {
     process.exit(0);
   }, 1000);
-}).catch((err) => {
+}).catch((err: unknown) => {
   console.error(err);
   process.exit(1);
 });

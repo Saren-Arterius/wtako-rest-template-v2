@@ -1,16 +1,19 @@
-import express, { Application } from 'express';
+import express, { type ErrorRequestHandler, type Application, type NextFunction, type Request, type Response } from 'express';
 import logger from 'morgan';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 
 import Boom from '@hapi/boom';
-import url from 'url';
-import jwt from 'jsonwebtoken';
 
 import { updateDB, sleep } from './utils/misc';
 import { CONFIG, knex } from './common';
 
+import index from './routes/index';
+import type { IPRequest } from './types/express';
+import type { Config } from './types/tables';
+
 export const app: Application = express();
+
 
 app.use(logger('dev'));
 app.use(express.static('public'));
@@ -29,16 +32,22 @@ app.use((req, res, next) => {
 });
 
 // CORS
-app.use((req, res, next) => {
-  if (!req.headers.origin) {
-    return next();
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.headers.origin == null) {
+    next();
+    return;
   }
-  const { hostname } = url.parse(req.headers.origin);
-  if (hostname !== null && CONFIG.trustedHosts[hostname]) {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  try {
+    const { hostname } = new URL(req.headers.origin);
+    if (CONFIG.trustedHosts[hostname]) {
+      res.header('Access-Control-Allow-Origin', req.headers.origin);
+      res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+      res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    }
+  } catch (error) {
+    console.error(error);
   }
+
   if (req.method === 'OPTIONS') {
     res.send()
     return
@@ -48,38 +57,55 @@ app.use((req, res, next) => {
 
 // Anti-CSRF
 app.use((req, res, next) => {
-  if (req.method !== 'POST') return next();
-  const check = req.headers.origin || req.headers.referer;
-  if (!check) return next();
-  const { hostname } = url.parse(check);
-  if (hostname !== null && !CONFIG.trustedHosts[hostname]) return next(Boom.badRequest(`Untrusted hostname ${hostname}`));
-  return next();
-});
-
-app.use((req: any, res, next) => {
-  if (req.query.http_auth) {
-    req.headers.authorization = req.query.http_auth;
+  if (req.method !== 'POST') { next(); return; }
+  const check = req.headers.origin ?? req.headers.referer;
+  if (check == null) { next(); return; }
+  try {
+    const { hostname } = new URL(check);
+    if (!CONFIG.trustedHosts[hostname]) {
+      next(Boom.badRequest(`Untrusted hostname ${hostname}`)); return;
+    }
+  } catch (error) {
+    console.error(error);
   }
-  req.userIP = req.headers['cf-connecting-ip'] ||
-    req.headers['x-forwarded-for'] ||
-    req.connection.remoteAddress;
-  req.deviceID = req.headers['x-gateway-id'] ||
-    req.headers['X-GATEWAY-ID'];
-
   next();
 });
 
-import index from './routes/index';
+app.use((req: IPRequest, res: Response, next: NextFunction) => {
+  if (req.query.http_auth != null && typeof req.query.http_auth === 'string') {
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring
+    req.headers.authorization = req.query.http_auth;
+  }
+
+  // Determine user IP with fallbacks
+  req.userIP = (
+    req.headers['cf-connecting-ip'] ??
+    req.headers['x-forwarded-for'] ??
+    req.connection.remoteAddress
+  )?.toString();
+
+  // Get device ID from headers (case-insensitive)
+  req.deviceID = (
+    req.headers['x-gateway-id'] ??
+    req.headers['X-GATEWAY-ID']
+  )?.toString();
+
+  next();
+});
 app.use('/', index);
 
-app.use((err: any, req: any, res: any, next: any) => {
+const errorHandler: ErrorRequestHandler = (err: Error | Boom.Boom, req, res, next) => {
   console.error(err);
-  if (err.output) {
-    return res.status(err.output.statusCode)
+  if (Boom.isBoom(err)) {
+    res.status(err.output.statusCode)
       .json(err.output.payload);
+  } else {
+    next(err);
   }
-  throw err;
-});
+};
+
+app.use(errorHandler);
+
 
 process.on('unhandledRejection', (reason, p) => {
   console.error(reason, 'Unhandled Rejection at Promise', p);
@@ -88,8 +114,8 @@ process.on('unhandledRejection', (reason, p) => {
   // process.exit(1);
 });
 
-export const main = (async () => {
-  while (updateDB) {
+export const main = (async (): Promise<void> => {
+  while (true) {
     try {
       await updateDB();
       break;
@@ -107,7 +133,7 @@ export const main = (async () => {
   })
     .onConflict('key')
     .merge();
-  const [pgCheck] = await knex('config').select().where('key', key);
+  const pgCheck = await knex<Config>('config').select().where('key', 'lastStart').first();
   console.log({ pgCheck });
 
   // await redis.set(key, value);

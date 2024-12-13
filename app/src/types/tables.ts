@@ -3,54 +3,54 @@
 
 
 
-export type Tables = {
+export interface Tables {
   "article": Article,
   "comment": Comment,
   "config": Config,
   "knex_migrations": KnexMigrations,
   "knex_migrations_lock": KnexMigrationsLock,
   "profile": Profile,
-};
+}
 
-export type Article = {
+export interface Article {
   id: string;
   title: string;
   content: string;
   created_at: string;
-};
+}
 
-export type Comment = {
+export interface Comment {
   id: string;
   article_id: string | null;
   content: string;
   side: string | null;
   location: unknown;
   created_at: string;
-};
+}
 
-export type Config = {
+export interface Config {
   key: string;
   value: string | null;
-};
+}
 
-export type KnexMigrations = {
+export interface KnexMigrations {
   id: number;
   name: string | null;
   batch: number | null;
   migration_time: Date | null;
-};
+}
 
-export type KnexMigrationsLock = {
+export interface KnexMigrationsLock {
   index: number;
   is_locked: number | null;
-};
+}
 
-export type Profile = {
+export interface Profile {
   id: string;
   username: string;
   name: string;
   description: string | null;
   created_at: string;
   details: Record<string, unknown>;
-};
+}
 

@@ -7,7 +7,7 @@ export const secretsDev = {
   redis_password: 'redis_password',
 
   cf_auth_headers: {
-    'X-Auth-Email': null,
-    'X-Auth-Key': null
+    'X-Auth-Email': '',
+    'X-Auth-Key': ''
   }
 };

@@ -4,19 +4,22 @@ import createKnex from 'knex';
 
 import { configDev } from './config/dev';
 import { secretsDev } from './config/secrets-dev';
+import _ from 'lodash';
 // process.env.PROD = 1;
 
 export const SECRETS = secretsDev;
 export const CONFIG = configDev;
 
-const knexConfig: typeof CONFIG.knex = Object.assign({}, JSON.parse(JSON.stringify(CONFIG.knex)));
+ 
+const knexConfig = _.cloneDeep(CONFIG.knex);
 knexConfig.pool = {
-  afterCreate(connection, callback) {
-    connection.query(`SET TIME ZONE "${CONFIG.timezone.postgres}"`, (err: any) => {
+  afterCreate(connection: { query: (arg0: string, arg1: (err: unknown) => void) => void; }, callback: (err: unknown, arg1: unknown) => void) {
+    connection.query(`SET TIME ZONE "${CONFIG.timezone.postgres}"`, (err: unknown) => {
       callback(err, connection);
     });
   }
 };
+
 pg.types.setTypeParser(20, 'text', parseInt);
 export const knex = createKnex(knexConfig);
 
